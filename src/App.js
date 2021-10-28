@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createUserWithEmailAndPassword, onAuthStateChanged, signOut, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from './firebase';
+import { auth, db } from './firebase';
+import { collection, getDocs, addDoc, setDoc, doc } from 'firebase/firestore';
 import './App.css';
 
 function App() {
@@ -9,14 +10,29 @@ function App() {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [user, setUser] = useState({});
+  const notesCollectionRef = collection(db, 'users');
+
+  const initialize = async () => {
+    const data = await getDocs(notesCollectionRef);
+    data.docs.map(doc => console.log(doc.data()));
+  }
+
+  const createNote = async () => {
+    await addDoc(notesCollectionRef, [{ note: 'created note!', idDone: false, noteId: 'ID_999' }]);
+  }
 
   onAuthStateChanged(auth, (currentUser) => {
     setUser(currentUser);
   });
 
+  useEffect(() => {
+    initialize();
+  }, []);
+
   const createUser = async () => {
     try {
-      await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
+      const createUser = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
+      await setDoc(doc(db, 'users', createUser.user.uid), { text: 'yeah!' });
     } catch (err) {
       console.log(err.message);
     }
@@ -72,6 +88,7 @@ function App() {
       {user?.email}
 
       <button onClick={handleLogout}>Sign Out</button>
+      <button onClick={createNote}>Create Note</button>
     </div>
   );
 }
